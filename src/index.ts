@@ -1,6 +1,5 @@
 import * as express from 'express'
 import { IAnime, reBuilDb } from './scrapper';
-import * as fs from 'fs';
 // import {apiKeyAuth} from '@vpriem/express-api-key-auth'
 import * as dotenv from 'dotenv';
 import * as http from 'http';
@@ -8,12 +7,19 @@ import * as bodyParser from 'body-parser';
 
 const app = express()
 import * as cors from "cors";
-const IN_MEMORY : IAnime[] = JSON.parse(fs.readFileSync('./animes.json', 'utf8'));
+
+import {fb} from './firebase';
+import { collection, where, query as fbQuery, getDocs, doc, getDoc } from 'firebase/firestore';
 
 const server = http.createServer(app);
 
 
 dotenv.config();
+
+
+//Dump IN_MEMORY to firebase
+
+
 
 
 // app.use(apiKeyAuth([process.env.API_KEY!]))
@@ -35,43 +41,61 @@ app.get('/rebuild', async (req, res) => {
 })
 
 
-app.get('/animes', (req, res) => {
-    console.log(req.query);
+app.get('/animes', async (req, res) => {
     const query = req.query.q;
     const title = req.query.t;
+    const animes =  collection(fb, 'animes');
+    let q : ReturnType<typeof fbQuery> | undefined; 
     if(query) {
-        const results = IN_MEMORY.filter(anime => anime.keywords.includes(query as string));
-        res.status(200).send(results.map(anime => ({id: anime.id, name: anime.name})));
+        //Query
+        q = fbQuery(animes, where('keywords', 'array-contains', query as string))
     }
     if(title) {
-        const results = IN_MEMORY.filter(anime => anime.name.toLowerCase().includes((title as string).toLowerCase()));
-        res.status(200).send(results.map(anime => ({id: anime.id, name: anime.name})));
+        const capitalizeTitle = (title as string).split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        q = fbQuery(animes, where('name', '==', capitalizeTitle))
     }
+
+    if(q) {
+        const querySnapshot = await getDocs(q);
+        const animes : IAnime[] = [];
+        querySnapshot.forEach((doc) => {
+            animes.push(doc.data() as IAnime);
+        });
+        return res.status(200).send(animes.map(anime => ({
+            id: anime.id,
+            name: anime.name,
+        })));
+    }
+
+    return res.status(404).send({});
 })
 
-app.get('/animes/:id', (req, res) => {
+app.get('/animes/:id', async (req, res) => {
     const id = req.params.id;
     if(!id) {
         res.status(404).send({});
     }
-    const result = IN_MEMORY.find(anime => anime.id === parseInt(id!));
-    if(result) {
-        res.status(200).send(result);
+    const result = await getDoc(doc(fb, 'animes', id.toString()))
+    if(result && result.exists() && result.data()) {
+        res.status(200).send(result.data());
     } else {
         res.status(404).send({});
     }
 })
 
-app.get('/animes/:id/:ep', (req, res) => {
+app.get('/animes/:id/:ep', async (req, res) => {
     const id = req.params.id;
     const episodeParam = req.params.ep;
     if(!episodeParam || !id) {
         res.status(404).send({});
         return;
     }
-    const result = IN_MEMORY.find(anime => anime.id === parseInt(id));
-    if(result) {
-        const episode = result.episodes.find(ep => ep.ep === parseInt(episodeParam));
+    const result = await getDoc(doc(fb, 'animes', id.toString()))
+
+    if(result && result.exists() && result.data()) {
+
+        const _data = result.data() as IAnime;
+        const episode = _data.episodes.find(ep => ep.ep === parseInt(episodeParam));
         if(episode) {
             res.status(200).send(episode);
         } else {
