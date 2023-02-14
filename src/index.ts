@@ -97,6 +97,20 @@ app.get('/animes/:id/:ep', async (req, res) => {
         const _data = result.data() as IAnime;
         const episode = _data.episodes.find(ep => ep.ep === parseInt(episodeParam));
         if(episode) {
+
+            //Knowing this fetch all the episodes
+            if(episode.type === 'RELLENO') {
+                //Find the next episode with type !== RELLENO
+                const nextEpisode = _data.episodes.find(ep => ep.ep > episode.ep && ep.type !== 'RELLENO');
+                if(nextEpisode) {
+                    res.status(200).send({
+                        ...episode,
+                        nextEpisode: nextEpisode.ep,
+                    });
+                    return;
+                }
+            }
+
             res.status(200).send(episode);
         } else {
             res.status(404).send({
