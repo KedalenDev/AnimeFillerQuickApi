@@ -122,7 +122,7 @@ app.get('/animes/:id/:ep', async (req, res) => {
     }
 })
 
-server.listen(3000,'0.0.0.0', () => {
+server.listen(3003,'0.0.0.0', () => {
 
     //get app listening port
     const add : any = server.address();
