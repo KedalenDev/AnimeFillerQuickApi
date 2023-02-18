@@ -114,7 +114,7 @@ dotenv.config();
 
 const client = createClient<
     Database
->(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
+>('https://dbpznlljunitpguktzvu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicHpubGxqdW5pdHBndWt0enZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY3NjU2NTY1NSwiZXhwIjoxOTkyMTQxNjU1fQ.PRhhtef-rIP3DUXCQHYM73fc76hm0vl201LNQMswl9E');
 
 //Dump IN_MEMORY to firebase
 
