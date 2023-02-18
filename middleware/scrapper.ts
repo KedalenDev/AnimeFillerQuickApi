@@ -1,40 +1,40 @@
 import puppeteer, { Browser } from "puppeteer";
-import { URLS } from "./urls";
+import { URLS } from "../middleware/urls";
 // import * as jsdom from "jsdom";
-import {load as CherrioLoad} from "cheerio";
+import { load as CherrioLoad } from "cheerio";
 
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 
 //Page is dynamically loaded so we need puppeteer ...
-    type EP_TYPES = 'CANON' | 'MIXTO' | 'RELLENO' | 'ANIME CANON' | 'NOVELA'
-    interface IEpisode {
-        ep: number,
-        title: string,
-        date: Date,
-        type: EP_TYPES
-    }
+type EP_TYPES = 'CANON' | 'MIXTO' | 'RELLENO' | 'ANIME CANON' | 'NOVELA'
+interface IEpisode {
+    ep: number,
+    title: string,
+    date: Date,
+    type: EP_TYPES
+}
 
 
-    export interface IAnime {
-        name: string,
-        episodes: IEpisode[],
-        episodesCountByType: {[key in EP_TYPES]: number},
-        totalEpisodes: number,
-        keywords: string[],
-        id: number
-    }
+export interface IAnime {
+    name: string,
+    episodes: IEpisode[],
+    episodesCountByType: { [key in EP_TYPES]: number },
+    totalEpisodes: number,
+    keywords: string[],
+    id: number
+}
 
-const getHtml = async (browser: Browser,url: string) : Promise<IAnime | null> => {
+const getHtml = async (browser: Browser, url: string): Promise<IAnime | null> => {
 
-  const page = await browser.newPage();
+    const page = await browser.newPage();
     await page.goto(url);
     page.removeAllListeners()
     const cookie = await page.waitForSelector('body > div.cookie.notification.is-warning.js-cookie-consent > div.columns.is-mobile > div:nth-child(2) > span');
-    if(cookie) {
+    if (cookie) {
         try {
             await cookie.click();
-        } catch(e) {
+        } catch (e) {
             //Ignore
         }
     }
@@ -49,18 +49,18 @@ const getHtml = async (browser: Browser,url: string) : Promise<IAnime | null> =>
                 window.scrollBy(0, distance);
                 totalHeight += distance;
 
-                if(totalHeight >= scrollHeight){
+                if (totalHeight >= scrollHeight) {
                     clearInterval(timer);
                     resolve();
                 }
             }, 5);
         });
     });
-    
 
 
 
- 
+
+
 
     const dom = CherrioLoad(await page.content());
 
@@ -77,7 +77,7 @@ const getHtml = async (browser: Browser,url: string) : Promise<IAnime | null> =>
     const episodes = rows.map((i, el) => {
         const row = dom(el);
         //If row class is == 'is-hidden' then skip
-        if(row.hasClass('is-hidden')) return;
+        if (row.hasClass('is-hidden')) return;
         const episode = row.find('td:nth-child(1)').text();
         const title = row.find('td:nth-child(3) > span').text();
         const date = row.find('td:nth-child(4)').text();
@@ -89,14 +89,14 @@ const getHtml = async (browser: Browser,url: string) : Promise<IAnime | null> =>
 
         const dateParts = _date.split('/');
         //Validate  
-        if(dateParts.length !== 3) return;
+        if (dateParts.length !== 3) return;
         const day = parseInt(dateParts[0]!);
         const month = parseInt(dateParts[1]!);
         const year = parseInt(dateParts[2]!);
-        if(isNaN(day) || isNaN(month) || isNaN(year)) return;
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return;
         const __date = new Date(year, month, day);
 
-            
+
 
         return {
             ep: parseInt(cleanString(episode)),
@@ -175,22 +175,22 @@ const getHtml = async (browser: Browser,url: string) : Promise<IAnime | null> =>
 const handleChunk = async (urls: string[]) => {
     const browser = await puppeteer.launch({
         headless: true,
-        });
+    });
     const promises = urls.map(url => getHtml(browser, url));
     const results = await Promise.all(promises);
     await browser.close();
     return results.filter(result => result !== null) as IAnime[];
-    
+
 }
 
 const getUrls = async () => {
     const CHUNK_SIZE = 10;
     const CHUNKS = Math.ceil(URLS.length / CHUNK_SIZE);
     const animes: IAnime[] = [];
-    for(let i = 0; i < CHUNKS; i++) {
+    for (let i = 0; i < CHUNKS; i++) {
         const urls = URLS.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         console.log(`Processing chunk ${i + 1} of ${CHUNKS}`);
-        const results = await  handleChunk(urls);
+        const results = await handleChunk(urls);
         animes.push(...results.filter(result => result !== null) as IAnime[]);
         console.log(`Finished chunk ${i + 1} of ${CHUNKS}`);
     }
@@ -199,7 +199,7 @@ const getUrls = async () => {
 
 export const reBuilDb = async () => {
     const urls = await getUrls();
-    
+
     await fs.writeFile('animes.json', JSON.stringify(urls, null, 2));
 }
 
