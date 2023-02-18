@@ -1,25 +1,4 @@
 
-export interface IEpisode {
-    index: number,
-    title: string,
-    url: string,
-    totalReactions: number,
-    totalComments: number,
-    reactions: IReactions,
-    watchOptions: string[],
-}
-
-
-
-export interface IReactions {
-    like: number,
-    love: number,
-    fun: number,
-    wow: number,
-    sad: number,
-    angry: number,
-}
-
 
 
 export interface IRelated<T> {
@@ -103,21 +82,6 @@ export const animeTypeToRaw = (type: AnimeType): ANIME_FLV_RAW_TYPE => {
 
 
 
-export interface IAnime {
-    id: string,
-    name: string,
-    type: AnimeType,
-    description: string,
-    episodes: IEpisode[],
-    state: 'FINISHED' | 'ONGOING',
-    related: IRelated<string>,
-    url: string,
-    popularity: number,
-    genres: AnimeGenre[],
-    episodeTemplate: string,
-    episodeCount: number,
-    coverImage: string,
-}
 
 
 export const animeFlvStateToAnilistState = (state: string) => {
@@ -301,3 +265,155 @@ export const internalToAnimeFlv: Record<AnimeGenre, ANIME_FLV_DIRECT_GENERE> = {
     "yaoi": "Yaoi",
     "yuri": "Yuri",
 };
+
+
+
+// SUAPABASE
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      animes: {
+        Row: {
+          _id: number
+          alternativetitles: string[]
+          episodes: number
+          flvpopularity: number
+          flvurl: string
+          genres: string[]
+          hasepisode: boolean
+          hasflvid: boolean
+          hasranking: boolean
+          image: string
+          link: string
+          movies: string[]
+          ovas: string[]
+          prequels: string[]
+          ranking: number
+          sequels: string[]
+          specials: string[]
+          spinoffs: string[]
+          state: string
+          synopsis: string
+          thumb: string
+          title: string
+          type: string
+        }
+        Insert: {
+          _id: number
+          alternativetitles: string[]
+          episodes: number
+          flvpopularity: number
+          flvurl: string
+          genres: string[]
+          hasepisode: boolean
+          hasflvid: boolean
+          hasranking: boolean
+          image: string
+          link: string
+          movies: string[]
+          ovas: string[]
+          prequels: string[]
+          ranking: number
+          sequels: string[]
+          specials: string[]
+          spinoffs: string[]
+          state: string
+          synopsis: string
+          thumb: string
+          title: string
+          type: string
+        }
+        Update: {
+          _id?: number
+          alternativetitles?: string[]
+          episodes?: number
+          flvpopularity?: number
+          flvurl?: string
+          genres?: string[]
+          hasepisode?: boolean
+          hasflvid?: boolean
+          hasranking?: boolean
+          image?: string
+          link?: string
+          movies?: string[]
+          ovas?: string[]
+          prequels?: string[]
+          ranking?: number
+          sequels?: string[]
+          specials?: string[]
+          spinoffs?: string[]
+          state?: string
+          synopsis?: string
+          thumb?: string
+          title?: string
+          type?: string
+        }
+      }
+      flv: {
+        Row: {
+          cover: string
+          description: string
+          genres: string[]
+          id: number
+          normalizedPopularity: number
+          popularityByGenere: Json
+          popularityIndex: number
+          ranking: number
+          related: Json
+          state: string
+          title: string
+          type: string
+        }
+        Insert: {
+          cover: string
+          description: string
+          genres: string[]
+          id: number
+          normalizedPopularity: number
+          popularityByGenere: Json
+          popularityIndex: number
+          ranking: number
+          related: Json
+          state: string
+          title: string
+          type: string
+        }
+        Update: {
+          cover?: string
+          description?: string
+          genres?: string[]
+          id?: number
+          normalizedPopularity?: number
+          popularityByGenere?: Json
+          popularityIndex?: number
+          ranking?: number
+          related?: Json
+          state?: string
+          title?: string
+          type?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}

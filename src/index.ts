@@ -8,7 +8,7 @@ import {
     AnimeAirState,
     AnimeType,
     IIntermediateAnimeItemStep
-} from './schema/anime'
+} from './HELPER_TYPES'
 import {
     readFile,
     writeFile
@@ -104,7 +104,7 @@ const app = express()
 import * as cors from "cors";
 import { createClient } from '@supabase/supabase-js';
 import moment = require('moment');
-import { Database } from './supabase';
+import { Database } from './HELPER_TYPES';
 import { toZod } from 'tozod';
 const server = http.createServer(app);
 

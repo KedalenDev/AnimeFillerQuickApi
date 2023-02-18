@@ -1,12 +1,10 @@
 
-import { Cheerio, load as html } from 'cheerio';
-import * as fs from 'fs/promises';
+import { load as html } from 'cheerio';
 import * as moment from 'moment';
-import { ANIME_FLV_RAW_TYPE, AnimeGenre, IAnime, IAnimeJsonItem, IIntermediateAnimeItemStep, IRelated, animeFlvRawTypeToAnilistType, animeFlvStateToAnilistState, animeFlvToInternal } from './schema/anime';
+import { AnimeGenre, IAnimeJsonItem, IIntermediateAnimeItemStep, IRelated, animeFlvToInternal } from './HELPER_TYPES';
 import { executablePath, Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY } from 'puppeteer';
 
 import puppeteer from 'puppeteer-extra';
-import * as crypto from 'crypto';
 const Stealth = require('puppeteer-extra-plugin-stealth')
 const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
 
@@ -172,7 +170,7 @@ export const getAnimeInfo = async (
         }).get();
         const _relatedAnime = await Promise.all(_relatedAnimeSelect?.map(async (el) => {
             const hrefText = el;
-            let type: keyof IAnime['related'] | null = null;
+            let type: keyof IAnimeJsonItem['related'] | null = null;
             let found = "";
             if (hrefText.includes('(Precuela)')) {
                 found = '(Precuela)';
@@ -214,7 +212,7 @@ export const getAnimeInfo = async (
         
         const state = p(selectors.state).text();
        
-        let related: IAnime['related'] = {} as IAnime['related'];
+        let related: IAnimeJsonItem['related'] = {} as IAnimeJsonItem['related'];
         if(_relatedAnime){
 
             const clearn =_relatedAnime.filter((el) => el !== null).reduce((acc, curr) => {
@@ -223,7 +221,7 @@ export const getAnimeInfo = async (
                     if (!acc[type]) acc[type] = [];
                     acc[type].push(title);
                     return acc;
-                }, {} as IAnime['related']);
+                }, {} as IAnimeJsonItem['related']);
             related = clearn;
         }
 
@@ -246,7 +244,7 @@ export const getAnimeInfo = async (
             title,
             rankingCount,
             rankingVoteCount
-        ] as [AnimeGenre[], IAnime['related'], string, string, string, string, string];
+        ] as [AnimeGenre[], IAnimeJsonItem['related'], string, string, string, string, string];
     
     
     }
@@ -460,9 +458,6 @@ export const GET_ANIMES = async (
     const withPop = calculatePopularity(cleanSeries);
     console.log(`Popularity calculated in ${moment.duration(popEnd.diff(popStart)).asSeconds()} seconds`);
 
-    await fs.writeFile(
-        './WithPop.json'
-        , JSON.stringify(withPop, null, 2));
 
    
 
