@@ -325,27 +325,17 @@ export const GET_ANIMES = async (
     console.clear();
     const start = moment();
     console.log('Getting animes from animeflv.net');
-    const n = moment().format('YYYY|MMMM|DD');
-    const [
-        year,
-        month,
-        day
-    ] = n.split('|');
-    const FOLDER = `./${year}/${month}/${day}`;
-    const [
-        URLS,
-        ANIMEINFO,
-        FINAL
-    ] = [
-            path.join(FOLDER, 'URLS.json'),
-            path.join(FOLDER, 'ANIMEINFO.json'),
-            path.join(FOLDER, 'FINAL.json'),
-        ]
-    let urls = (await getAnimesUrls())
 
+    let urls = await getAnimesUrls()
+    
+    console.log('Got ' + urls.length + ' animes urls');
+    urls = [...new Set([...urls.map(v => JSON.stringify(v))])].map(v => JSON.parse(v));
+    console.log('Got ' + urls.length + ' animes urls');
     if (slice > 0) {
         urls = urls.slice(0, slice);
     }
+    console.log('Got ' + urls.length + ' animes urls');
+    console.log('Getting anime info');
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -365,7 +355,6 @@ export const GET_ANIMES = async (
         state: string;
         type: string;
     } | null)[] = [];
-    console.log('Getting anime info');
     for (const chunk of series) {
         const chunkSeries = await Promise.all(chunk.map(async s => {
 
@@ -379,6 +368,7 @@ export const GET_ANIMES = async (
     }
     const cleanSeries = _series.filter(v => v !== null).flat() as IAnimeJsonItem[];
 
+    console.log('Got ' + cleanSeries.length + ' animes of ' + urls.length + ' animes');
 
     const popStart = moment();
     console.log('Calculating popularity');

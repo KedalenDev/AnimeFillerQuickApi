@@ -213,22 +213,79 @@ app.get('/rebuild', async (req, res) => {
 
 
 const validQueries = z.union([
-    z.literal('cover'), 
-z.literal('description'), 
-z.literal('genres'),
-z.literal('id'),
-z.literal('normalizedPopularity'),
-z.literal('popularityByGenere'),
-z.literal('popularityIndex'),
-z.literal('ranking'),
-z.literal('related'),
-z.literal('state'),
-z.literal('title'),
-z.literal('type'),
+    z.literal('cover'),
+    z.literal('description'),
+    z.literal('genres'),
+    z.literal('id'),
+    z.literal('normalizedPopularity'),
+    z.literal('popularityByGenere'),
+    z.literal('popularityIndex'),
+    z.literal('ranking'),
+    z.literal('related'),
+    z.literal('state'),
+    z.literal('title'),
+    z.literal('type'),
 ]);
 
 const validPg = Object.keys(AnimeGenreEnum).map(k => animeFlvToInternal[k as any]);
 
+
+const parseQuery = (q: string,
+    pg: string | undefined,
+    res: express.Response,
+) => {
+    const asArray = (q as string).split(',');
+    const failed: string[] = [];
+    const valid: string[] = [];
+    let hasId = false;
+    let popByGenere = false;
+    const isValid = asArray.map(a => {
+        const is = validQueries.safeParse(a);
+        if (!is.success) {
+            failed.push(a);
+        } else {
+            if (a === 'id') {
+                hasId = true;
+            }
+            if (a === 'popularityByGenere') {
+                popByGenere = true;
+            } else {
+                valid.push(a);
+            }
+        }
+        return is;
+    });
+
+    if (popByGenere && !pg) {
+        return res.status(400).send({
+            error: `Query parameter 'popularityByGenere' requires 'pg' query parameter`
+        });
+    } else if (popByGenere && pg) {
+        const pgs = (pg as string).split(',');
+        const validPgs = pgs.filter(p => validPg.includes(p as any));
+        const invalidPgs = pgs.filter(p => !validPg.includes(p as any));
+        if (invalidPgs.length > 0) {
+            return res.status(400).send({
+                error: `Invalid 'pg' query parameter -> [${invalidPgs.join(', ')}]`
+            });
+        }
+
+        validPgs.forEach(p => {
+            valid.push(`popularityByGenere -> ${p}`);
+        })
+    }
+
+    if (!hasId) {
+        valid.push('id');
+    }
+    if (isValid.some(v => !v.success)) {
+        return res.status(400).send({
+            error: `Invalid query parameters -> [${failed.join(', ')}]`
+        });
+    }
+
+    return valid.join(', ');
+}
 
 app.get('/anime/:id', async (req, res) => {
     const id = req.params.id;
@@ -238,60 +295,15 @@ app.get('/anime/:id', async (req, res) => {
 
     const q = req.query?.q;
     const pg = req.query?.pg;
-    console.log(q);
     let query: string = 'title, related'
     if (q) {
-        const asArray = (q as string).split(',');
-        const failed: string[] = [];
-        const valid: string[]= [];
-        let hasId = false;
-        let popByGenere = false;
-        const isValid = asArray.map(a => {
-            const is = validQueries.safeParse(a);
-            if (!is.success) {
-                failed.push(a);
-            } else {
-                if (a === 'id') {
-                    hasId = true;
-                }
-                if (a === 'popularityByGenere') {
-                    popByGenere = true;
-                } else {
-                valid.push(a);
-                }
-            }
-            return is;
-        });
 
-        if(popByGenere && !pg) {
-            return res.status(400).send({
-                error: `Query parameter 'popularityByGenere' requires 'pg' query parameter`
-            });
-        } else if (popByGenere && pg) {
-            const pgs = (pg as string).split(',');
-            const validPgs = pgs.filter(p => validPg.includes(p as any));
-            const invalidPgs = pgs.filter(p => !validPg.includes(p as any));
-            if(invalidPgs.length > 0) {
-                return res.status(400).send({
-                    error: `Invalid 'pg' query parameter -> [${invalidPgs.join(', ')}]`
-                });
-            }
-          
-            validPgs.forEach(p => {
-                valid.push(`popularityByGenere -> ${p}`);
-            })
-        }
+        const parsed = parseQuery(q as string, pg as string | undefined, res);
+        if (typeof parsed === 'string')
+            query = parsed;
+        else
+            return parsed;
 
-        if (!hasId) {
-            valid.push('id');
-        }
-        if(isValid.some(v => !v.success)) {
-            return res.status(400).send({
-                error: `Invalid query parameters -> [${failed.join(', ')}]`
-            });
-        }
-
-        query = valid.join(', ');
     }
 
     console.log(query);
@@ -311,12 +323,12 @@ app.get('/anime/:id', async (req, res) => {
     const keys = Object.keys(sanitizedData);
     keys.forEach(k => {
         const value = sanitizedData[k];
-        if(validPg.includes(k) && typeof value !== 'number') {
+        if (validPg.includes(k) && typeof value !== 'number') {
             sanitizedData[k] = 0;
         }
     })
 
-            
+
 
     return res.status(200).send(sanitizedData);
 
@@ -334,6 +346,24 @@ app.get('/similar/:id', async (req, res) => {
     if (!id) {
         res.status(404).send({});
     }
+    const q = req.query?.q;
+    const pg = req.query?.pg;
+
+    let query: string = 'title, genres'
+    if (q) {
+        const parsed = parseQuery(q as string,
+            pg as string | undefined,
+            res);
+        if (typeof parsed === 'string')
+            query = parsed;
+        else
+            return parsed;
+    }
+
+    const originalNoGeneres = !query.includes('genres');
+    if (!query.includes('genres')) {
+        query += ', genres';
+    }
     const result = await client.from('flv').select('title, genres, popularityByGenere').eq('id', id).single();
     const { data, error } = result;
     if (error || !data) {
@@ -342,13 +372,13 @@ app.get('/similar/:id', async (req, res) => {
             error ? 500 : 404
         ).send({});
     }
-    const genere = data!.genres;
+    const genere = data!.genres as AnimeGenre[];
     const pop = data!.popularityByGenere as Record<AnimeGenre, number>;
     const topGeneres = genere.sort((a, b) => pop[b] - pop[a]).slice(0, 2);
 
     console.log(topGeneres.map(g => `${g} - ${pop[g]}`));
 
-    const similar = await client.from('flv').select('title, genres')
+    const similar = await client.from('flv').select(query)
         .contains('genres', topGeneres)
         .order(`popularityByGenere ->> ${topGeneres[0]}` as any, { ascending: false })
         .order(`normalizedPopularity`, { ascending: false })
@@ -359,15 +389,15 @@ app.get('/similar/:id', async (req, res) => {
 
     //If there are less than 10 results, get more
 
-    if(similar.error){
+    if (similar.error) {
         console.log(similar.error);
         res.status(500).send({});
     }
 
-    
+
     if (similar.data?.length! < 10) {
         const nRange = 10 - similar.data!.length;
-        const more = await client.from('flv').select('title, genres')
+        const more = await client.from('flv').select(query)
             .contains('genres', topGeneres)
             .order(`popularityByGenere ->> ${topGeneres[0]}` as any, { ascending: false })
             .order(`normalizedPopularity`, { ascending: false })
@@ -378,27 +408,31 @@ app.get('/similar/:id', async (req, res) => {
 
     console.log(`Retrieved ${similar.data?.length} similar animes`);
 
-    const WHY = '{{similar.title}} - Comparten: [{{genre}}]'
-    const composeWhy = similar.data?.map(s => {
-        let _why = WHY
-            .replace('{{main.title}}', data!.title)
-            .replace('{{similar.title}}', s.title);
-        const intersection = s.genres.filter(value => genere.includes(value));
-        _why = _why.replace('{{genre}}', intersection.join(' y '));
-        return {
-            ...s,
-            why: _why,
+    const intersections = similar.data!.map(d => {
+        const dGenres = (d as any).genres as AnimeGenre[];
+        const intersection = dGenres.filter(g => topGeneres.includes(g));
+        const toReturn = {
+            ...(d as any),
             intersection
         }
-    }).sort((a, b) => b.intersection.length - a.intersection.length);
+        if (originalNoGeneres) {
+            delete toReturn.genres;
+        }
+        return toReturn;
+    })
 
-    return res.status(200).json(composeWhy);
+    return res.status(200).json(intersections);
 })
 
 
+const CSS = `@import url(https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap);.ext_loader-container,.ext_loader-container>*{box-sizing:border-box!important;margin:0!important;border:none!important}body{background:#add8e6}.ext_loader-container>*{padding:0!important;font-family:Roboto,sans-serif!important}.ext_loader-container{width:5rem;display:flex;row-gap:25px;flex-direction:column;align-items:center;justify-content:center}.ext_circular-progress{position:relative;height:4rem;width:4rem;animation:1s linear infinite fillIn;background:conic-gradient(#7d2ae8 3.6deg,#3333334c 0deg);border-radius:50%;display:flex;align-items:center;justify-content:center}.ext_circular-progress::before{content:"";position:absolute;height:80%;width:80%;background:#fff;border-radius:50%}.ext_circular-progress-value{font-size:1.5rem;font-weight:600;color:#7d2ae8;z-index:90;font-family:Roboto,sans-serif!important}`
+
 app.get('/css', async (req, res) => {
-    const file = path.join(__dirname, 'css', 'style.css');
-    return res.sendFile(file);
+
+    res.set('Content-Type', 'text/css');
+
+
+    return res.send(CSS);
 });
 
 
