@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+body {
+    background: lightblue;
+
+}
+
+.ext_loader-container>* {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    font-family: 'Roboto', sans-serif !important;
+}
+
+.ext_loader-container {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    border: none !important;
+    width: 5rem;
+   
+    display: flex;
+    row-gap: 25px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+}
+
+
+.ext_circular-progress {
+    position: relative;
+    height: 4rem;
+    width: 4rem;
+    animation: fillIn 1s linear infinite;
+    background: conic-gradient(#7d2ae8 3.6deg, #3333334c 0deg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ext_circular-progress::before {
+    content: "";
+    position: absolute;
+    
+    height: 80%;
+    width: 80%;
+    background: #fff;
+    border-radius: 50%;
+}
+
+
+.ext_circular-progress-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #7d2ae8;
+    z-index: 90;
+    font-family: 'Roboto', sans-serif !important;
+}

@@ -106,6 +106,7 @@ import { createClient } from '@supabase/supabase-js';
 import moment = require('moment');
 import { Database } from './HELPER_TYPES';
 import { toZod } from 'tozod';
+import path = require('path');
 const server = http.createServer(app);
 
 
@@ -393,6 +394,14 @@ app.get('/similar/:id', async (req, res) => {
 
     return res.status(200).json(composeWhy);
 })
+
+
+app.get('/css', async (req, res) => {
+    const file = path.join(__dirname, 'css', 'style.css');
+    return res.sendFile(file);
+});
+
+
 
 
 server.listen(3000, '0.0.0.0', () => {
